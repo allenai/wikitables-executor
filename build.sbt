@@ -17,4 +17,6 @@ mainClass in assembly := Some("org.allenai.wikitables.Executor")
 
 fork := true
 
+connectInput in run := true
+
 cancelable in Global := true

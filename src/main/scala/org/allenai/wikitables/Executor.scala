@@ -15,6 +15,14 @@ import fig.basic.LispTree
 
 object Executor {
   def main(args: Array[String]): Unit = {
+    if (args(0) == "serve") {
+      serve(args(1))
+    } else {
+      evaluateFile(args)
+    }
+  }
+
+  def evaluateFile(args: Array[String]): Unit = {
     val exampleFile = args(0)
     val logicalFormFile = args(1)
     val outputDenotationFile = logicalFormFile.replace(".txt", "_denotations.tsv")
@@ -58,6 +66,32 @@ object Executor {
 
     println("Total examples evaluated: " + denotations.size)
     println("Average accuracy: " + (denotations.map(_._2).sum / denotations.size))
+  }
+
+  def serve(tableDirectory: String) {
+    TableKnowledgeGraph.opts.baseCSVDir = tableDirectory
+    val targetPreprocessor = new TableValuePreprocessor()
+
+    val builder = getSempreBuilder()
+    val executor = builder.executor
+    val valueEvaluator = builder.valueEvaluator
+    while (true) {
+      val exampleString = scala.io.StdIn.readLine()
+      val logicalForm = scala.io.StdIn.readLine()
+      try {
+        val sempreFormula = Formula.fromString(logicalForm)
+        val lispTree = LispTree.proto.parseFromString(exampleString)
+        val example = CustomExample.fromLispTree(lispTree, "")
+        val predicted = executor.execute(sempreFormula, example.context).value
+        val target = targetPreprocessor.preprocess(example.targetValue)
+        val result = valueEvaluator.getCompatibility(target, predicted)
+        println(result)
+      } catch {
+        case e: Exception => {
+          println(0.0)
+        }
+      }
+    }
   }
 
   def getSempreBuilder(): Builder = {
